@@ -1,104 +1,247 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>SliderSnake Web</title>
-<style>
-body { margin: 0; overflow: hidden; background: #0c0c14; color: white; font-family: sans-serif; }
-canvas { display: block; }
-#ui { position: absolute; top: 10px; left: 10px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SliderSnake - Free Multiplayer Snake Game</title>
+    <meta name="description" content="Play SliderSnake! A unique multiplayer snake game where small snakes are faster. Adopt a Bestie, raise babies, and dominate the arena. Free to play online.">
+    <meta name="keywords" content="snake game, multiplayer, slither.io clone, browser game, python game, underdog mechanic">
+    <meta name="robots" content="index, follow">
+    <style>
+        body { margin: 0; overflow: hidden; background: #0c0c14; color: white; font-family: 'Segoe UI', sans-serif; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 8px; pointer-events: none; display: none; }
+        h2 { margin: 0 0 5px 0; font-size: 18px; color: #00ff7f; }
+        p { margin: 2px 0; font-size: 14px; }
+        .connected { color: #00ff7f; font-weight: bold; }
+        .disconnected { color: #ff4444; font-weight: bold; }
+    </style>
 </head>
 <body>
+
 <div id="ui">
-<h2>SliderSnake Web</h2>
-<p>Score: <span id="score">0</span></p>
-<p>Status: <span id="status">Connecting</span></p>
+    <h2>SliderSnake Web</h2>
+    <p>Score: <span id="score">0</span></p>
+    <p>Status: <span id="status" class="disconnected">Connecting...</span></p>
 </div>
+
 <canvas id="gameCanvas"></canvas>
+
 <script>
-const c = document.getElementById("gameCanvas"), x = c.getContext("2d");
-c.width = innerWidth; c.height = innerHeight;
-let snakes = {}, foods = [], camX = 0, camY = 0, myId = null;
-const ws = new WebSocket(`ws://${location.hostname}:8765`);
+    const c = document.getElementById("gameCanvas"), x = c.getContext("2d");
+    c.width = innerWidth; c.height = innerHeight;
+    let snakes = {}, foods = [], camX = 0, camY = 0, myId = null;
+    let selectedSkin = "classic";
+    let playerName = "";
 
-ws.onopen = () => {
-    document.getElementById("status").innerText = "Connected!";
-    document.getElementById("status").style.color = "#0f0";
-    let name = prompt("Enter Snake Name:", "Player") || "Player";
-    ws.send(JSON.stringify({ type: "join", name: name }));
-};
-
-ws.onmessage = (e) => {
-    let data = JSON.parse(e.data);
-    if (data.type === "update") {
-        snakes = {};
-        data.snakes.forEach(s => { snakes[s.id] = s; if (s.isPlayer) myId = s.id; });
-        foods = data.foods || [];
-        if (myId && snakes[myId]) document.getElementById("score").innerText = snakes[myId].points || 0;
-    }
-};
-
-ws.onclose = () => {
-    document.getElementById("status").innerText = "Disconnected";
-    setTimeout(() => location.reload(), 2000);
-};
-
-c.addEventListener("mousemove", (e) => {
-    if (ws.readyState !== 1) return;
-    ws.send(JSON.stringify({ type: "move", targetX: e.clientX + camX, targetY: e.clientY + camY }));
-});
-
-function draw() {
-    x.fillStyle = "#0c0c14";
-    x.fillRect(0, 0, c.width, c.height);
-    if (!myId || !snakes[myId]) { requestAnimationFrame(draw); return; }
+    // --- LOGIN MENU ---
+    const loginMenu = document.createElement("div");
+    loginMenu.id = "loginMenu";
+    loginMenu.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;padding:20px;border-radius:15px;text-align:center;color:white;z-index:100;box-shadow:0 0 30px rgba(0,0,0,0.7);width:320px;display:flex;flex-direction:column;align-items:center;";
     
-    let p = snakes[myId];
-    camX = p.x - c.width / 2;
-    camY = p.y - c.height / 2;
+    loginMenu.innerHTML = `
+        <h2 style="margin:0 0 15px 0; color:#00ff7f; text-shadow:0 0 10px #00ff7f;">SliderSnake</h2>
+        <div id="previewBox" style="width:200px;height:150px;background:#0c0c14;border:2px solid #333;border-radius:10px;margin-bottom:15px;position:relative;overflow:hidden;">
+            <canvas id="previewCanvas" width="200" height="150" style="display:block;"></canvas>
+            <div style="position:absolute;bottom:5px;left:0;width:100%;text-align:center;font-size:12px;color:#aaa;">Preview</div>
+        </div>
+        <label style="display:block;margin-bottom:5px;font-size:14px;">Your Name:</label>
+        <input type="text" id="usernameInput" placeholder="Enter Nickname" maxlength="15" 
+               style="width:90%;padding:8px;margin-bottom:15px;border-radius:5px;border:1px solid #444;background:#222;color:white;text-align:center;font-size:16px;">
+        <label style="display:block;margin-bottom:10px;font-size:14px;">Pick Your Skin:</label>
+        <div style="display:flex;gap:6px;justify-content:center;margin-bottom:15px;">
+            <button onclick="selectSkin('classic')" class="skin-btn" style="flex:1;padding:6px;background:#444;color:white;border:2px solid transparent;border-radius:4px;cursor:pointer;font-size:11px;">Classic</button>
+            <button onclick="selectSkin('neon')" class="skin-btn" style="flex:1;padding:6px;background:#444;color:white;border:2px solid transparent;border-radius:4px;cursor:pointer;font-size:11px;">Neon</button>
+            <button onclick="selectSkin('rainbow')" class="skin-btn" style="flex:1;padding:6px;background:#444;color:white;border:2px solid transparent;border-radius:4px;cursor:pointer;font-size:11px;">Rainbow</button>
+            <button onclick="selectSkin('gold')" class="skin-btn" style="flex:1;padding:6px;background:#ffd700;color:black;border:2px solid transparent;border-radius:4px;cursor:pointer;font-size:11px;">Gold</button>
+            <button onclick="selectSkin('void')" class="skin-btn" style="flex:1;padding:6px;background:#000;color:white;border:2px solid #fff;border-radius:4px;cursor:pointer;font-size:11px;">Void</button>
+        </div>
+        <button onclick="startGame()" style="width:100%;padding:12px;background:#00ff7f;color:black;border:none;border-radius:5px;font-weight:bold;font-size:16px;cursor:pointer;transition:0.2s;">Click PLAY to start with your Bestie!</button>
+        <p id="errorMsg" style="color:#ff4444;font-size:12px;height:15px;margin:0;"></p>
+    `;
+    document.body.appendChild(loginMenu);
 
-    x.strokeStyle = "#1e1e2d"; x.lineWidth = 1;
-    for (let i = Math.floor(camX / 100) * 100; i < camX + c.width + 100; i += 100) {
-        x.beginPath(); x.moveTo(i - camX, 0); x.lineTo(i - camX, c.height); x.stroke();
+    // --- PREVIEW LOGIC ---
+    const previewCanvas = document.getElementById("previewCanvas");
+    const pCtx = previewCanvas.getContext("2d");
+    let previewHue = 0;
+
+    function drawPreview() {
+        pCtx.fillStyle = "#0c0c14";
+        pCtx.fillRect(0, 0, 200, 150);
+        let cx = 100, cy = 75, radius = 12;
+        let rgb = [0, 255, 0];
+        if (selectedSkin === "gold") rgb = [255, 215, 0];
+        if (selectedSkin === "void") rgb = [0, 0, 0];
+        
+        pCtx.shadowBlur = 15;
+        if (selectedSkin === "rainbow") {
+            let hue = previewHue; 
+            let hueStep = hue / 60; 
+            let xVal = (1 - Math.abs((hueStep % 2) - 1)) * 255;
+            if (hueStep < 1) rgb = [255, xVal, 0]; 
+            else if (hueStep < 2) rgb = [xVal, 255, 0]; 
+            else if (hueStep < 3) rgb = [0, 255, xVal];
+            else if (hueStep < 4) rgb = [0, xVal, 255]; 
+            else if (hueStep < 5) rgb = [xVal, 0, 255]; 
+            else rgb = [255, 0, xVal];
+            pCtx.shadowColor = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+        } else if (selectedSkin === "gold") { pCtx.shadowColor = "#ffd700"; pCtx.shadowBlur = 25; }
+        else if (selectedSkin === "void") { pCtx.shadowColor = "white"; pCtx.shadowBlur = 10; }
+        else if (selectedSkin === "neon") { pCtx.shadowColor = `rgb(${Math.min(255,rgb[0]+50)},${Math.min(255,rgb[1]+50)},${Math.min(255,rgb[2]+50)})`; pCtx.shadowBlur = 30; }
+        else { pCtx.shadowColor = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; }
+
+        pCtx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+        pCtx.beginPath(); pCtx.arc(cx, cy, radius, 0, Math.PI * 2); pCtx.fill();
+        if (selectedSkin === "void") { pCtx.strokeStyle = "white"; pCtx.lineWidth = 2; pCtx.stroke(); }
+        
+        // Eyes
+        pCtx.fillStyle = "white"; pCtx.beginPath(); pCtx.arc(cx - 4, cy - 4, 3, 0, Math.PI*2); pCtx.fill();
+        pCtx.beginPath(); pCtx.arc(cx + 4, cy - 4, 3, 0, Math.PI*2); pCtx.fill();
+        pCtx.fillStyle = "black"; pCtx.beginPath(); pCtx.arc(cx - 4, cy - 4, 1.5, 0, Math.PI*2); pCtx.fill();
+        pCtx.beginPath(); pCtx.arc(cx + 4, cy - 4, 1.5, 0, Math.PI*2); pCtx.fill();
+
+        // Bestie
+        let bx = cx + 30, by = cy + 10;
+        pCtx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; pCtx.shadowColor = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+        pCtx.beginPath(); pCtx.arc(bx, by, radius * 0.8, 0, Math.PI * 2); pCtx.fill();
+        pCtx.fillStyle = "white"; pCtx.beginPath(); pCtx.arc(bx - 3, by - 3, 2, 0, Math.PI*2); pCtx.fill();
+        pCtx.beginPath(); pCtx.arc(bx + 3, by - 3, 2, 0, Math.PI*2); pCtx.fill();
+        pCtx.fillStyle = "black"; pCtx.beginPath(); pCtx.arc(bx - 3, by - 3, 1, 0, Math.PI*2); pCtx.fill();
+        pCtx.beginPath(); pCtx.arc(bx + 3, by - 3, 1, 0, Math.PI*2); pCtx.fill();
+        
+        pCtx.fillStyle = "#aaa"; pCtx.font = "10px Arial"; pCtx.textAlign = "center"; pCtx.fillText("You + Bestie", cx + 15, cy + 35);
+        previewHue = (previewHue + 2) % 360;
+        requestAnimationFrame(drawPreview);
     }
-    for (let i = Math.floor(camY / 100) * 100; i < camY + c.height + 100; i += 100) {
-        x.beginPath(); x.moveTo(0, i - camY); x.lineTo(c.width, i - camY); x.stroke();
+    drawPreview();
+
+    function selectSkin(skin) {
+        selectedSkin = skin;
+        document.querySelectorAll(".skin-btn").forEach(btn => {
+            if (btn.innerText.toLowerCase() === skin) { btn.style.borderColor = "#00ff7f"; btn.style.transform = "scale(1.1);"; }
+            else { btn.style.borderColor = "transparent"; btn.style.transform = "scale(1);"; }
+        });
     }
 
-    foods.forEach(f => {
-        let fx = f.x - camX, fy = f.y - camY;
-        if (fx > -10 && fx < c.width + 10 && fy > -10 && fy < c.height + 10) {
-            x.fillStyle = "#fff"; x.beginPath(); x.arc(fx, fy, 4, 0, Math.PI * 2); x.fill();
-        }
-    });
+    function startGame() {
+        const nameInput = document.getElementById("usernameInput");
+        let name = nameInput.value.trim();
+        if (!name) { name = "Player"; nameInput.value = "Player"; }
+        playerName = name;
+        
+        // Ensure UI is visible before hiding menu
+        document.getElementById("ui").style.display = "block";
+        document.getElementById("status").style.display = "block";
+        loginMenu.style.display = "none";
 
-    Object.values(snakes).forEach(s => {
-        let sx = s.x - camX, sy = s.y - camY;
-        if (sx < -50 || sx > c.width + 50 || sy < -50 || sy > c.height + 50) return;
+        const wsUrl = "wss://slidersnake.onrender.com";
+        const ws = new WebSocket(wsUrl);
 
-        if (s.segments) {
-            x.fillStyle = s.color;
-            s.segments.forEach((seg, i) => {
-                let dx = seg[0] - camX, dy = seg[1] - camY;
-                if (dx > -20 && dx < c.width + 20 && dy > -20 && dy < c.height + 20) {
-                    x.beginPath(); x.arc(dx, dy, 8 - (i * 0.05), 0, Math.PI * 2); x.fill();
+        ws.onopen = () => {
+            document.getElementById("status").innerText = "Connected!";
+            document.getElementById("status").className = "connected";
+            ws.send(JSON.stringify({ type: "join", name: playerName, skin: selectedSkin }));
+        };
+
+        ws.onmessage = (e) => {
+            let data = JSON.parse(e.data);
+            if (data.type === "update") {
+                snakes = {};
+                data.snakes.forEach(s => { snakes[s.id] = s; if (s.isPlayer) myId = s.id; });
+                foods = data.foods || [];
+                if (myId && snakes[myId]) document.getElementById("score").innerText = snakes[myId].points || 0;
+            }
+        };
+
+        ws.onclose = () => {
+            document.getElementById("status").innerText = "Disconnected";
+            document.getElementById("status").className = "disconnected";
+            setTimeout(() => location.reload(), 2000);
+        };
+
+        c.addEventListener("mousemove", (e) => {
+            if (ws.readyState !== 1) return;
+            ws.send(JSON.stringify({ type: "move", targetX: e.clientX + camX, targetY: e.clientY + camY }));
+        });
+
+        function draw() {
+            x.fillStyle = "#0c0c14"; x.fillRect(0, 0, c.width, c.height);
+            if (!myId || !snakes[myId]) { requestAnimationFrame(draw); return; }
+            let p = snakes[myId];
+            camX = p.x - c.width / 2; camY = p.y - c.height / 2;
+
+            // Grid
+            x.strokeStyle = "#1a1a2e"; x.lineWidth = 1;
+            for (let i = Math.floor(camX / 100) * 100; i < camX + c.width + 100; i += 100) { x.beginPath(); x.moveTo(i - camX, 0); x.lineTo(i - camX, c.height); x.stroke(); }
+            for (let i = Math.floor(camY / 100) * 100; i < camY + c.height + 100; i += 100) { x.beginPath(); x.moveTo(0, i - camY); x.lineTo(c.width, i - camY); x.stroke(); }
+
+            // Food
+            foods.forEach(f => {
+                let fx = f.x - camX, fy = f.y - camY;
+                if (fx > -10 && fx < c.width + 10 && fy > -10 && fy < c.height + 10) {
+                    x.shadowBlur = 10; x.shadowColor = "#fff"; x.fillStyle = "#fff";
+                    x.beginPath(); x.arc(fx, fy, 4, 0, Math.PI * 2); x.fill(); x.shadowBlur = 0;
                 }
             });
-        } else {
-            x.fillStyle = s.color; x.beginPath(); x.arc(sx, sy, 10, 0, Math.PI * 2); x.fill();
+
+            // Snakes
+            Object.values(snakes).forEach(s => {
+                let sx = s.x - camX, sy = s.y - camY;
+                if (sx < -50 || sx > c.width + 50 || sy < -50 || sy > c.height + 50) return;
+                let radius = 8 + (s.length * 0.02); if (radius < 6) radius = 6;
+                let rgb = s.color.replace(/[^\d,]/g, '').split(',').map(Number);
+                let r = rgb[0], g = rgb[1], b = rgb[2];
+
+                for (let i = s.segments.length - 1; i >= 0; i--) {
+                    let seg = s.segments[i]; let dx = seg[0] - camX; let dy = seg[1] - camY;
+                    if (dx < -20 || dx > c.width + 20 || dy < -20 || dy > c.height + 20) continue;
+                    let segR = r, segG = g, segB = b;
+                    let glowColor = `rgb(${segR},${segG},${segB})`; let glowBlur = 15;
+
+                    if (s.skin === "rainbow") {
+                        let hue = (s.hue + (i * 5)) % 360; 
+                        let hueStep = hue / 60; 
+                        let xVal = (1 - Math.abs((hueStep % 2) - 1)) * 255;
+                        if (hueStep < 1) { segR = 255; segG = xVal; segB = 0; } 
+                        else if (hueStep < 2) { segR = xVal; segG = 255; segB = 0; }
+                        else if (hueStep < 3) { segR = 0; segG = 255; segB = xVal; } 
+                        else if (hueStep < 4) { segR = 0; segG = xVal; segB = 255; }
+                        else if (hueStep < 5) { segR = xVal; segG = 0; segB = 255; } 
+                        else { segR = 255; segG = 0; segB = xVal; }
+                        glowColor = `rgb(${segR},${segG},${segB})`; glowBlur = 20;
+                    } else if (s.skin === "gold") { segR = 255; segG = 215; segB = 0; glowColor = "#ffd700"; glowBlur = 25; }
+                    else if (s.skin === "void") { segR = 0; segG = 0; segB = 0; glowColor = "white"; glowBlur = 10; }
+                    else if (s.skin === "neon") { glowBlur = 30; glowColor = `rgb(${Math.min(255,r+50)},${Math.min(255,g+50)},${Math.min(255,b+50)})`; }
+
+                    x.shadowBlur = glowBlur; x.shadowColor = glowColor; x.fillStyle = `rgb(${segR},${segG},${segB})`;
+                    if (s.skin === "void") { x.strokeStyle = "white"; x.lineWidth = 2; }
+                    x.beginPath(); x.arc(dx, dy, radius, 0, Math.PI * 2); x.fill();
+                    if (s.skin === "void") x.stroke();
+                }
+                x.shadowBlur = 0;
+
+                // Eyes
+                if (s.segments.length > 0) {
+                    let head = s.segments[0]; let hx = head[0] - camX; let hy = head[1] - camY;
+                    x.fillStyle = "white";
+                    x.beginPath(); x.arc(hx - radius/2, hy - radius/2, radius/3, 0, Math.PI*2); x.fill();
+                    x.beginPath(); x.arc(hx + radius/2, hy - radius/2, radius/3, 0, Math.PI*2); x.fill();
+                    x.fillStyle = "black";
+                    x.beginPath(); x.arc(hx - radius/2, hy - radius/2, radius/6, 0, Math.PI*2); x.fill();
+                    x.beginPath(); x.arc(hx + radius/2, hy - radius/2, radius/6, 0, Math.PI*2); x.fill();
+                }
+
+                // Name
+                x.fillStyle = "white"; x.font = "bold 14px Arial"; x.textAlign = "center";
+                let tag = ""; if (s.isFriend) tag = "[BESTIE] "; if (s.isLegacy) tag = "[NEW BESTIE] ";
+                x.fillText(tag + s.name, sx, sy - radius - 10);
+            });
+            requestAnimationFrame(draw);
         }
-
-        x.fillStyle = "white"; x.font = "12px Arial";
-        let tag = "";
-        if (s.isFriend) tag = "[BESTIE] ";
-        if (s.isLegacy) tag = "[NEW BESTIE] ";
-        x.fillText(tag + s.name, sx - 20, sy - 15);
-    });
-
-    requestAnimationFrame(draw);
-}
-draw();
+        draw();
+    }
+    selectSkin("classic");
 </script>
 </body>
 </html>
