@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SliderSnake Web</title>
+<style>
+body { margin: 0; overflow: hidden; background: #0c0c14; color: white; font-family: sans-serif; }
+canvas { display: block; }
+#ui { position: absolute; top: 10px; left: 10px; }
+</style>
+</head>
+<body>
+<div id="ui">
+<h2>SliderSnake Web</h2>
+<p>Score: <span id="score">0</span></p>
+<p>Status: <span id="status">Connecting</span></p>
+</div>
+<canvas id="gameCanvas"></canvas>
+<script>
+const c = document.getElementById("gameCanvas"), x = c.getContext("2d");
+c.width = innerWidth; c.height = innerHeight;
+let snakes = {}, foods = [], camX = 0, camY = 0, myId = null;
+const ws = new WebSocket(`ws://${location.hostname}:8765`);
+
+ws.onopen = () => {
+    document.getElementById("status").innerText = "Connected!";
+    document.getElementById("status").style.color = "#0f0";
+    let name = prompt("Enter Snake Name:", "Player") || "Player";
+    ws.send(JSON.stringify({ type: "join", name: name }));
+};
+
+ws.onmessage = (e) => {
+    let data = JSON.parse(e.data);
+    if (data.type === "update") {
+        snakes = {};
+        data.snakes.forEach(s => { snakes[s.id] = s; if (s.isPlayer) myId = s.id; });
+        foods = data.foods || [];
+        if (myId && snakes[myId]) document.getElementById("score").innerText = snakes[myId].points || 0;
+    }
+};
+
+ws.onclose = () => {
+    document.getElementById("status").innerText = "Disconnected";
+    setTimeout(() => location.reload(), 2000);
+};
+
+c.addEventListener("mousemove", (e) => {
+    if (ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: "move", targetX: e.clientX + camX, targetY: e.clientY + camY }));
+});
+
+function draw() {
+    x.fillStyle = "#0c0c14";
+    x.fillRect(0, 0, c.width, c.height);
+    if (!myId || !snakes[myId]) { requestAnimationFrame(draw); return; }
+    
+    let p = snakes[myId];
+    camX = p.x - c.width / 2;
+    camY = p.y - c.height / 2;
+
+    x.strokeStyle = "#1e1e2d"; x.lineWidth = 1;
+    for (let i = Math.floor(camX / 100) * 100; i < camX + c.width + 100; i += 100) {
+        x.beginPath(); x.moveTo(i - camX, 0); x.lineTo(i - camX, c.height); x.stroke();
+    }
+    for (let i = Math.floor(camY / 100) * 100; i < camY + c.height + 100; i += 100) {
+        x.beginPath(); x.moveTo(0, i - camY); x.lineTo(c.width, i - camY); x.stroke();
+    }
+
+    foods.forEach(f => {
+        let fx = f.x - camX, fy = f.y - camY;
+        if (fx > -10 && fx < c.width + 10 && fy > -10 && fy < c.height + 10) {
+            x.fillStyle = "#fff"; x.beginPath(); x.arc(fx, fy, 4, 0, Math.PI * 2); x.fill();
+        }
+    });
+
+    Object.values(snakes).forEach(s => {
+        let sx = s.x - camX, sy = s.y - camY;
+        if (sx < -50 || sx > c.width + 50 || sy < -50 || sy > c.height + 50) return;
+
+        if (s.segments) {
+            x.fillStyle = s.color;
+            s.segments.forEach((seg, i) => {
+                let dx = seg[0] - camX, dy = seg[1] - camY;
+                if (dx > -20 && dx < c.width + 20 && dy > -20 && dy < c.height + 20) {
+                    x.beginPath(); x.arc(dx, dy, 8 - (i * 0.05), 0, Math.PI * 2); x.fill();
+                }
+            });
+        } else {
+            x.fillStyle = s.color; x.beginPath(); x.arc(sx, sy, 10, 0, Math.PI * 2); x.fill();
+        }
+
+        x.fillStyle = "white"; x.font = "12px Arial";
+        let tag = "";
+        if (s.isFriend) tag = "[BESTIE] ";
+        if (s.isLegacy) tag = "[NEW BESTIE] ";
+        x.fillText(tag + s.name, sx - 20, sy - 15);
+    });
+
+    requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
