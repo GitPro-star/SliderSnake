@@ -8,11 +8,11 @@
     <meta name="keywords" content="snake game, multiplayer, slither.io clone, browser game, python game, underdog mechanic">
     <meta name="robots" content="index, follow">
     <style>
-        body { margin: 0; overflow: hidden; background: #0c0c14; color: white; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #0c0c14; color: white; font-family: 'Segoe UI', Arial, sans-serif; user-select: none; }
         canvas { display: block; }
-        #ui { position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 8px; pointer-events: none; display: none; }
-        h2 { margin: 0 0 5px 0; font-size: 18px; color: #00ff7f; }
-        p { margin: 2px 0; font-size: 14px; }
+        #ui { position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.6); padding: 12px 20px; border-radius: 10px; pointer-events: none; display: none; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); }
+        h2 { margin: 0 0 5px 0; font-size: 18px; color: #00ff7f; text-shadow: 0 0 5px rgba(0,255,127,0.3); }
+        p { margin: 2px 0; font-size: 14px; font-weight: bold; }
         .connected { color: #00ff7f; font-weight: bold; }
         .disconnected { color: #ff4444; font-weight: bold; }
     </style>
@@ -34,32 +34,46 @@
     let selectedSkin = "classic";
     let playerName = "";
 
-    // --- LOGIN MENU ---
+    // --- LOGIN MENU W STYLU SLITHER.IO ---
     const loginMenu = document.createElement("div");
     loginMenu.id = "loginMenu";
-    loginMenu.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;padding:20px;border-radius:15px;text-align:center;color:white;z-index:100;box-shadow:0 0 30px rgba(0,0,0,0.7);width:320px;display:flex;flex-direction:column;align-items:center;";
+    loginMenu.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,20,35,0.85);padding:30px;border-radius:30px;text-align:center;color:white;z-index:100;box-shadow:0 0 40px rgba(0,255,127,0.2);width:340px;display:flex;flex-direction:column;align-items:center;border:1px solid rgba(255,255,255,0.05);backdrop-filter:blur(8px);font-family:'Arial',sans-serif;";
     
     loginMenu.innerHTML = `
-        <h2 style="margin:0 0 15px 0; color:#00ff7f; text-shadow:0 0 10px #00ff7f;">SliderSnake</h2>
-        <div id="previewBox" style="width:200px;height:150px;background:#0c0c14;border:2px solid #333;border-radius:10px;margin-bottom:15px;position:relative;overflow:hidden;">
-            <canvas id="previewCanvas" width="200" height="150" style="display:block;"></canvas>
-            <div style="position:absolute;bottom:5px;left:0;width:100%;text-align:center;font-size:12px;color:#aaa;">Preview</div>
+        <h1 style="margin:0 0 5px 0; color:#00ff7f; font-size:36px; font-weight:900; letter-spacing:2px; text-shadow:0 0 15px rgba(0,255,127,0.6); font-style:italic;">slither.io</h1>
+        <p style="margin:0 0 20px 0; font-size:12px; color:#888; letter-spacing:1px;">SLIDERSNAKE EDITION</p>
+
+        <div id="previewBox" style="width:160px;height:120px;background:#06060c;border:2px solid #222;border-radius:50%;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:inset 0 0 20px rgba(0,0,0,0.9);">
+            <canvas id="previewCanvas" width="160" height="120" style="display:block;"></canvas>
         </div>
-        <label style="display:block;margin-bottom:5px;font-size:14px;">Your Name:</label>
-        <input type="text" id="usernameInput" placeholder="Enter Nickname" maxlength="15" 
-               style="width:90%;padding:8px;margin-bottom:15px;border-radius:5px;border:1px solid #444;background:#222;color:white;text-align:center;font-size:16px;">
-        <label style="display:block;margin-bottom:10px;font-size:14px;">Pick Your Skin:</label>
-        <div style="display:flex;gap:6px;justify-content:center;margin-bottom:15px;">
-            <button onclick="selectSkin('classic')" class="skin-btn" style="flex:1;padding:6px;background:#444;color:white;border:2px solid transparent;border-radius:4px;cursor:pointer;font-size:11px;">Classic</button>
-            <button onclick="selectSkin('neon')" class="skin-btn" style="flex:1;padding:6px;background:#444;color:white;border:2px solid transparent;border-radius:4px;cursor:pointer;font-size:11px;">Neon</button>
-            <button onclick="selectSkin('rainbow')" class="skin-btn" style="flex:1;padding:6px;background:#444;color:white;border:2px solid transparent;border-radius:4px;cursor:pointer;font-size:11px;">Rainbow</button>
-            <button onclick="selectSkin('gold')" class="skin-btn" style="flex:1;padding:6px;background:#ffd700;color:black;border:2px solid transparent;border-radius:4px;cursor:pointer;font-size:11px;">Gold</button>
-            <button onclick="selectSkin('void')" class="skin-btn" style="flex:1;padding:6px;background:#000;color:white;border:2px solid #fff;border-radius:4px;cursor:pointer;font-size:11px;">Void</button>
+
+        <input type="text" id="usernameInput" placeholder="Nick" maxlength="15" 
+               style="width:85%;padding:12px 15px;margin-bottom:15px;border-radius:25px;border:2px solid #333;background:rgba(0,0,0,0.4);color:white;text-align:center;font-size:18px;font-weight:bold;outline:none;transition:0.3s;box-shadow:inset 0 2px 5px rgba(0,0,0,0.5);">
+        
+        <p style="margin:0 0 10px 0;font-size:13px;color:#aaa;font-weight:bold;">Skins</p>
+        <div style="display:flex;gap:5px;justify-content:center;margin-bottom:25px;width:95%;flex-wrap:wrap;">
+            <button onclick="selectSkin('classic')" class="skin-btn" style="padding:6px 12px;background:#2a2a40;color:white;border:2px solid #444;border-radius:15px;cursor:pointer;font-size:12px;font-weight:bold;transition:0.2s;outline:none;">Classic</button>
+            <button onclick="selectSkin('neon')" class="skin-btn" style="padding:6px 12px;background:#2a2a40;color:#00ff7f;border:2px solid #444;border-radius:15px;cursor:pointer;font-size:12px;font-weight:bold;transition:0.2s;outline:none;">Neon</button>
+            <button onclick="selectSkin('rainbow')" class="skin-btn" style="padding:6px 12px;background:#2a2a40;color:#ff00ff;border:2px solid #444;border-radius:15px;cursor:pointer;font-size:12px;font-weight:bold;transition:0.2s;outline:none;">Rainbow</button>
+            <button onclick="selectSkin('gold')" class="skin-btn" style="padding:6px 12px;background:#ffd700;color:black;border:2px solid transparent;border-radius:15px;cursor:pointer;font-size:12px;font-weight:bold;transition:0.2s;outline:none;">Gold</button>
+            <button onclick="selectSkin('void')" class="skin-btn" style="padding:6px 12px;background:#05050a;color:white;border:2px solid #555;border-radius:15px;cursor:pointer;font-size:12px;font-weight:bold;transition:0.2s;outline:none;">Void</button>
         </div>
-        <button onclick="startGame()" style="width:100%;padding:12px;background:#00ff7f;color:black;border:none;border-radius:5px;font-weight:bold;font-size:16px;cursor:pointer;transition:0.2s;">Click PLAY to start with your Bestie!</button>
-        <p id="errorMsg" style="color:#ff4444;font-size:12px;height:15px;margin:0;"></p>
+
+        <button onclick="startGame()" style="width:90%;padding:14px;background:#00ff7f;color:black;border:none;border-radius:30px;font-weight:bold;font-size:22px;cursor:pointer;box-shadow:0 4px 15px rgba(0,255,127,0.4);transition:0.2s;letter-spacing:1px;text-transform:uppercase;outline:none;">Play</button>
+        
+        <p id="subText" style="color:#00ff7f;font-size:13px;margin:12px 0 0 0;font-weight:bold;opacity:0.8;text-shadow:0 0 5px rgba(0,255,127,0.3);">Click PLAY to start with your Bestie!</p>
+        <p id="errorMsg" style="color:#ff4444;font-size:12px;height:15px;margin:8px 0 0 0;font-weight:bold;"></p>
     `;
     document.body.appendChild(loginMenu);
+
+    // CSS dla animacji i najechania myszką
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = `
+        #usernameInput:focus { border-color: #00ff7f !important; box-shadow: 0 0 10px rgba(0,255,127,0.5), inset 0 2px 5px rgba(0,0,0,0.5) !important; }
+        .skin-btn:hover { transform: scale(1.05); background: #3a3a55 !important; }
+        button[onclick="startGame()"]:hover { transform: scale(1.03); background: #22ff99 !important; box-shadow: 0 6px 20px rgba(0,255,127,0.6) !important; }
+    `;
+    document.head.appendChild(styleSheet);
 
     // --- PREVIEW LOGIC ---
     const previewCanvas = document.getElementById("previewCanvas");
@@ -67,9 +81,9 @@
     let previewHue = 0;
 
     function drawPreview() {
-        pCtx.fillStyle = "#0c0c14";
-        pCtx.fillRect(0, 0, 200, 150);
-        let cx = 100, cy = 75, radius = 12;
+        pCtx.fillStyle = "#06060c";
+        pCtx.fillRect(0, 0, 160, 120);
+        let cx = 80, cy = 60, radius = 12;
         let rgb = [0, 255, 0];
         if (selectedSkin === "gold") rgb = [255, 215, 0];
         if (selectedSkin === "void") rgb = [0, 0, 0];
@@ -102,15 +116,14 @@
         pCtx.beginPath(); pCtx.arc(cx + 4, cy - 4, 1.5, 0, Math.PI*2); pCtx.fill();
 
         // Bestie
-        let bx = cx + 30, by = cy + 10;
+        let bx = cx + 25, by = cy + 12;
         pCtx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; pCtx.shadowColor = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-        pCtx.beginPath(); pCtx.arc(bx, by, radius * 0.8, 0, Math.PI * 2); pCtx.fill();
-        pCtx.fillStyle = "white"; pCtx.beginPath(); pCtx.arc(bx - 3, by - 3, 2, 0, Math.PI*2); pCtx.fill();
-        pCtx.beginPath(); pCtx.arc(bx + 3, by - 3, 2, 0, Math.PI*2); pCtx.fill();
-        pCtx.fillStyle = "black"; pCtx.beginPath(); pCtx.arc(bx - 3, by - 3, 1, 0, Math.PI*2); pCtx.fill();
-        pCtx.beginPath(); pCtx.arc(bx + 3, by - 3, 1, 0, Math.PI*2); pCtx.fill();
+        pCtx.beginPath(); pCtx.arc(bx, by, radius * 0.7, 0, Math.PI * 2); pCtx.fill();
+        pCtx.fillStyle = "white"; pCtx.beginPath(); pCtx.arc(bx - 2, by - 2, 1.8, 0, Math.PI*2); pCtx.fill();
+        pCtx.beginPath(); pCtx.arc(bx + 2, by - 2, 1.8, 0, Math.PI*2); pCtx.fill();
+        pCtx.fillStyle = "black"; pCtx.beginPath(); pCtx.arc(bx - 2, by - 2, 0.8, 0, Math.PI*2); pCtx.fill();
+        pCtx.beginPath(); pCtx.arc(bx + 2, by - 2, 0.8, 0, Math.PI*2); pCtx.fill();
         
-        pCtx.fillStyle = "#aaa"; pCtx.font = "10px Arial"; pCtx.textAlign = "center"; pCtx.fillText("You + Bestie", cx + 15, cy + 35);
         previewHue = (previewHue + 2) % 360;
         requestAnimationFrame(drawPreview);
     }
@@ -119,128 +132,145 @@
     function selectSkin(skin) {
         selectedSkin = skin;
         document.querySelectorAll(".skin-btn").forEach(btn => {
-            if (btn.innerText.toLowerCase() === skin) { btn.style.borderColor = "#00ff7f"; btn.style.transform = "scale(1.1);"; }
-            else { btn.style.borderColor = "transparent"; btn.style.transform = "scale(1);"; }
+            if (btn.getAttribute("onclick").includes(skin)) { 
+                btn.style.borderColor = "#00ff7f"; 
+                btn.style.boxShadow = "0 0 8px rgba(0,255,127,0.5)";
+            } else { 
+                btn.style.borderColor = btn.innerText.toLowerCase() === "void" ? "#555" : "transparent"; 
+                btn.style.boxShadow = "none";
+            }
         });
     }
+    selectSkin('classic'); // Wybierz startowo classic
+
+    // --- NATYWNA OBSŁUGA WEBSOCKET DLA FASTAPI ---
+    let ws = null;
+    let targetX = 0, targetY = 0;
 
     function startGame() {
         const nameInput = document.getElementById("usernameInput");
+        const errorMsg = document.getElementById("errorMsg");
         let name = nameInput.value.trim();
-        if (!name) { name = "Player"; nameInput.value = "Player"; }
+        if (!name) name = "Player_" + Math.floor(Math.random() * 999);
         playerName = name;
-        
-        document.getElementById("ui").style.display = "block";
-        document.getElementById("status").style.display = "block";
-        loginMenu.style.display = "none";
 
-        const wsUrl = "wss://slidersnake.onrender.com";
-        const ws = new WebSocket(wsUrl);
+        errorMsg.innerText = "Connecting to arena...";
+
+        // Określenie protokołu (ws:// lub wss://) na podstawie środowiska hostingu Render
+        const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        const wsUrl = protocol + window.location.host + "/ws";
+
+        ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-            document.getElementById("status").innerText = "Connected!";
+            document.getElementById("status").innerText = "Connected";
             document.getElementById("status").className = "connected";
-            ws.send(JSON.stringify({ type: "join", name: playerName, skin: selectedSkin }));
+            document.getElementById("ui").style.display = "block";
+            loginMenu.style.display = "none";
+
+            // Wysłanie pakietu powitalnego zgodnego ze strukturą w Pythonie
+            ws.send(JSON.stringify({
+                type: "join",
+                name: playerName,
+                skin: selectedSkin
+            }));
         };
 
-        ws.onmessage = (e) => {
-            let data = JSON.parse(e.data);
-            if (data.type === "update") {
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            
+            if (msg.type === "joined") {
+                myId = msg.player_id;
+                initGameControls();
+                requestAnimationFrame(drawGame);
+            } 
+            else if (msg.type === "update") {
+                // Konwersja listy węży z Pythona na obiekt JS dla wygody rysowania
                 snakes = {};
-                data.snakes.forEach(s => { snakes[s.id] = s; if (s.isPlayer) myId = s.id; });
-                foods = data.foods || [];
-                if (myId && snakes[myId]) document.getElementById("score").innerText = snakes[myId].points || 0;
+                msg.snakes.forEach(s => { snakes[s.id] = s; });
+                foods = msg.foods;
+
+                if (myId && snakes[myId]) {
+                    document.getElementById("score").innerText = snakes[myId].points;
+                    camX = snakes[myId].x;
+                    camY = snakes[myId].y;
+                }
             }
         };
 
         ws.onclose = () => {
             document.getElementById("status").innerText = "Disconnected";
             document.getElementById("status").className = "disconnected";
-            setTimeout(() => location.reload(), 2000);
+            loginMenu.style.display = "flex";
+            errorMsg.innerText = "Connection lost! Try again.";
         };
+    }
 
-        c.addEventListener("mousemove", (e) => {
-            if (ws.readyState !== 1) return;
-            ws.send(JSON.stringify({ type: "move", targetX: e.clientX + camX, targetY: e.clientY + camY }));
+    function initGameControls() {
+        window.onmousemove = (e) => {
+            // Przeliczanie ruchu myszki relatywnie do środka ekranu (pozycji gracza)
+            targetX = camX + (e.clientX - innerWidth / 2);
+            targetY = camY + (e.clientY - innerHeight / 2);
+            
+            if (ws && ws.readyState === WebSocket.OPEN && myId) {
+                ws.send(JSON.stringify({
+                    type: "move",
+                    player_id: myId,
+                    targetX: targetX,
+                    targetY: targetY
+                }));
+            }
+        };
+    }
+
+    // --- RENDROWANIE GRAFIKI NA CANVAS ---
+    function drawGame() {
+        if (!myId) return;
+        
+        // Czyszczenie i rysowanie tła areny
+        x.fillStyle = "#0c0c14";
+        x.fillRect(0, 0, c.width, c.height);
+
+        x.save();
+        // Centrowanie kamery świata na graczu
+        x.translate(c.width / 2 - camX, c.height / 2 - camY);
+
+        // Rysowanie jedzenia (czerwone kropki z lekką poświatą)
+        foods.forEach(f => {
+            x.fillStyle = "#ff4444";
+            x.shadowBlur = 10;
+            x.shadowColor = "#ff4444";
+            x.beginPath();
+            x.arc(f.x, f.y, 5, 0, Math.PI * 2);
+            x.fill();
+        });
+        x.shadowBlur = 0; // Reset poświaty dla węży
+
+        // Rysowanie wszystkich węży
+        Object.values(snakes).forEach(s => {
+            x.fillStyle = s.color;
+            
+            // Rysowanie segmentów od końca do głowy
+            s.segments.forEach((seg, index) => {
+                x.beginPath();
+                // Głowa (indeks 0) jest delikatnie większa
+                let r = index === 0 ? 12 : 10; 
+                x.arc(seg[0], seg[1], r, 0, Math.PI * 2);
+                x.fill();
+            });
+            
+            // Podpis nicku nad głową węża
+            x.fillStyle = "rgba(255,255,255,0.8)";
+            x.font = "bold 14px Arial";
+            x.textAlign = "center";
+            x.fillText(s.name, s.x, s.y - 22);
         });
 
-        function draw() {
-            x.fillStyle = "#0c0c14"; x.fillRect(0, 0, c.width, c.height);
-            if (!myId || !snakes[myId]) { requestAnimationFrame(draw); return; }
-            let p = snakes[myId];
-            camX = p.x - c.width / 2; camY = p.y - c.height / 2;
-
-            // Grid
-            x.strokeStyle = "#1a1a2e"; x.lineWidth = 1;
-            for (let i = Math.floor(camX / 100) * 100; i < camX + c.width + 100; i += 100) { x.beginPath(); x.moveTo(i - camX, 0); x.lineTo(i - camX, c.height); x.stroke(); }
-            for (let i = Math.floor(camY / 100) * 100; i < camY + c.height + 100; i += 100) { x.beginPath(); x.moveTo(0, i - camY); x.lineTo(c.width, i - camY); x.stroke(); }
-
-            // Food
-            foods.forEach(f => {
-                let fx = f.x - camX, fy = f.y - camY;
-                if (fx > -10 && fx < c.width + 10 && fy > -10 && fy < c.height + 10) {
-                    x.shadowBlur = 10; x.shadowColor = "#fff"; x.fillStyle = "#fff";
-                    x.beginPath(); x.arc(fx, fy, 4, 0, Math.PI * 2); x.fill(); x.shadowBlur = 0;
-                }
-            });
-
-            // Snakes
-            Object.values(snakes).forEach(s => {
-                let sx = s.x - camX, sy = s.y - camY;
-                if (sx < -50 || sx > c.width + 50 || sy < -50 || sy > c.height + 50) return;
-                let radius = 8 + (s.length * 0.02); if (radius < 6) radius = 6;
-                let rgb = s.color.replace(/[^\d,]/g, '').split(',').map(Number);
-                let r = rgb[0], g = rgb[1], b = rgb[2];
-
-                for (let i = s.segments.length - 1; i >= 0; i--) {
-                    let seg = s.segments[i]; let dx = seg[0] - camX; let dy = seg[1] - camY;
-                    if (dx < -20 || dx > c.width + 20 || dy < -20 || dy > c.height + 20) continue;
-                    let segR = r, segG = g, segB = b;
-                    let glowColor = `rgb(${segR},${segG},${segB})`; let glowBlur = 15;
-
-                    if (s.skin === "rainbow") {
-                        let hue = (s.hue + (i * 5)) % 360; 
-                        let hueStep = hue / 60; 
-                        let xVal = (1 - Math.abs((hueStep % 2) - 1)) * 255;
-                        if (hueStep < 1) { segR = 255; segG = xVal; segB = 0; } 
-                        else if (hueStep < 2) { segR = xVal; segG = 255; segB = 0; }
-                        else if (hueStep < 3) { segR = 0; segG = 255; segB = xVal; } 
-                        else if (hueStep < 4) { segR = 0; segG = xVal; segB = 255; }
-                        else if (hueStep < 5) { segR = xVal; segG = 0; segB = 255; } 
-                        else { segR = 255; segG = 0; segB = xVal; }
-                        glowColor = `rgb(${segR},${segG},${segB})`; glowBlur = 20;
-                    } else if (s.skin === "gold") { segR = 255; segG = 215; segB = 0; glowColor = "#ffd700"; glowBlur = 25; }
-                    else if (s.skin === "void") { segR = 0; segG = 0; segB = 0; glowColor = "white"; glowBlur = 10; }
-                    else if (s.skin === "neon") { glowBlur = 30; glowColor = `rgb(${Math.min(255,r+50)},${Math.min(255,g+50)},${Math.min(255,b+50)})`; }
-
-                    x.shadowBlur = glowBlur; x.shadowColor = glowColor; x.fillStyle = `rgb(${segR},${segG},${segB})`;
-                    if (s.skin === "void") { x.strokeStyle = "white"; x.lineWidth = 2; }
-                    x.beginPath(); x.arc(dx, dy, radius, 0, Math.PI * 2); x.fill();
-                    if (s.skin === "void") x.stroke();
-                }
-                x.shadowBlur = 0;
-
-                // Eyes
-                if (s.segments.length > 0) {
-                    let head = s.segments[0]; let hx = head[0] - camX; let hy = head[1] - camY;
-                    x.fillStyle = "white";
-                    x.beginPath(); x.arc(hx - radius/2, hy - radius/2, radius/3, 0, Math.PI*2); x.fill();
-                    x.beginPath(); x.arc(hx + radius/2, hy - radius/2, radius/3, 0, Math.PI*2); x.fill();
-                    x.fillStyle = "black";
-                    x.beginPath(); x.arc(hx - radius/2, hy - radius/2, radius/6, 0, Math.PI*2); x.fill();
-                    x.beginPath(); x.arc(hx + radius/2, hy - radius/2, radius/6, 0, Math.PI*2); x.fill();
-                }
-
-                // Name
-                x.fillStyle = "white"; x.font = "bold 14px Arial"; x.textAlign = "center";
-                let tag = ""; if (s.isFriend) tag = "[BESTIE] "; if (s.isLegacy) tag = "[NEW BESTIE] ";
-                x.fillText(tag + s.name, sx, sy - radius - 10);
-            });
-            requestAnimationFrame(draw);
-        }
-        draw();
+        x.restore();
+        requestAnimationFrame(drawGame);
     }
-    selectSkin("classic");
+
+    window.onresize = () => { c.width = innerWidth; c.height = innerHeight; };
 </script>
 </body>
 </html>
