@@ -5,6 +5,7 @@ import random
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles  # Import StaticFiles
 import uvicorn
 
 # --- Configuration ---
@@ -114,9 +115,11 @@ def handle_bestie_succession(player, bots):
 # --- FastAPI App ---
 app = FastAPI()
 
-@app.get("/")
-async def root():
-    return {"message": "SliderSnake Server is Running!"}
+# MOUNT STATIC FILES TO SERVE index.html AT ROOT "/"
+# This ensures that visiting the main URL loads the game, not the JSON message
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
+
+# REMOVED the @app.get("/") function so it doesn't override the static file
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -187,4 +190,5 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 8000))
     print(f"🐍 SliderSnake Server starting on port {port}...")
+    print(f"🌍 Region: Frankfurt (Optimized for Poland/Europe)")
     uvicorn.run(app, host="0.0.0.0", port=port)
