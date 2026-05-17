@@ -75,7 +75,7 @@
     <p>Status: <span id="status" class="disconnected">Connecting...</span></p>
 </div>
 
-<!-- LOBBY BEZ SERWERÓW I JAKOŚCI -->
+<!-- MENU GŁÓWNE -->
 <div id="slither-lobby-wrapper">
     <h1 class="logo-title">SliderSnake</h1>
 
@@ -95,7 +95,7 @@
         <button onclick="selectSkin('void')" class="slither-skin-btn">Void</button>
     </div>
 
-    <!-- LEWY DOLNY RÓG - CHANGE SKIN -->
+    <!-- LEWY DOLNY RÓG -->
     <div id="skin-corner-btn" onclick="toggleSkinMenu()">
         <canvas id="previewCanvas" width="70" height="50" style="position:static; background:transparent; display:block;"></canvas>
         <span>Change Skin</span>
@@ -120,20 +120,35 @@
     function drawPreview() {
         pCtx.clearRect(0, 0, 70, 50);
         let cx = 35, cy = 25, radius = 9;
-        let rgb = [0, 255, 0];
-        if (selectedSkin === "gold") rgb = [255, 215, 0];
-        if (selectedSkin === "void") rgb = [0, 0, 0];
+        
+        let r = 0, g = 255, b = 0; // Domyślne wartości dla classic
+        
+        if (selectedSkin === "gold") { r = 255; g = 215; b = 0; }
+        if (selectedSkin === "void") { r = 0; g = 0; b = 0; }
+        if (selectedSkin === "neon") { r = 0; g = 255; b = 127; }
         
         if (selectedSkin === "rainbow") {
-            let hue = previewHue; let hueStep = hue / 60; let xVal = (1 - Math.abs((hueStep % 2) - 1)) * 255;
-            if (hueStep < 1) rgb = [255, xVal, 0]; else if (hueStep < 2) rgb = [xVal, 255, 0]; else if (hueStep < 3) rgb = [0, 255, xVal];
-            else if (hueStep < 4) rgb = [0, xVal, 255]; else if (hueStep < 5) rgb = [xVal, 0, 255]; else rgb = [255, 0, xVal];
-        } else if (selectedSkin === "neon") { rgb = [0, 255, 127]; }
+            let hue = previewHue; 
+            let hueStep = hue / 60; 
+            let xVal = Math.floor((1 - Math.abs((hueStep % 2) - 1)) * 255);
+            if (hueStep < 1) { r = 255; g = xVal; b = 0; }
+            else if (hueStep < 2) { r = xVal; g = 255; b = 0; }
+            else if (hueStep < 3) { r = 0; g = 255; b = xVal; }
+            else if (hueStep < 4) { r = 0; g = xVal; b = 255; }
+            else if (hueStep < 5) { r = xVal; g = 0; b = 255; }
+            else { r = 255; g = 0; b = xVal; }
+        }
 
-        pCtx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+        pCtx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
         pCtx.beginPath(); pCtx.arc(cx, cy, radius, 0, Math.PI * 2); pCtx.fill();
-        if (selectedSkin === "void") { pCtx.strokeStyle = "white"; pCtx.lineWidth = 1; pCtx.stroke(); }
+        
+        if (selectedSkin === "void") { 
+            pCtx.strokeStyle = "white"; 
+            pCtx.lineWidth = 1; 
+            pCtx.stroke(); 
+        }
 
+        // Oczy podglądu
         pCtx.fillStyle = "white"; pCtx.beginPath(); pCtx.arc(cx - 3, cy - 3, 2.5, 0, Math.PI*2); pCtx.fill();
         pCtx.beginPath(); pCtx.arc(cx + 3, cy - 3, 2.5, 0, Math.PI*2); pCtx.fill();
         pCtx.fillStyle = "black"; pCtx.beginPath(); pCtx.arc(cx - 3, cy - 3, 1, 0, Math.PI*2); pCtx.fill();
@@ -218,6 +233,7 @@
 
     function initGameControls() {
         window.onmousemove = (e) => {
+            // POPRAWIONE: Obie pozycje myszy obliczane są teraz prawidłowo względem wymiarów okna
             targetX = camX + (e.clientX - innerWidth / 2);
             targetY = camY + (e.clientY - innerHeight / 2);
             if (ws && ws.readyState === WebSocket.OPEN && myId) {
@@ -255,13 +271,13 @@
         });
         x.shadowBlur = 0;
 
-        // Węże
+        // Węże (POPRAWIONE: rysowanie z użyciem współrzędnych X i Y z tablicy segmentu)
         Object.values(snakes).forEach(s => {
             x.fillStyle = s.color;
             s.segments.slice().reverse().forEach((seg, idx) => {
                 x.beginPath();
                 let realIdx = s.segments.length - 1 - idx;
-                x.arc(seg, seg, realIdx === 0 ? 12 : 10, 0, Math.PI * 2);
+                x.arc(seg[0], seg[1], realIdx === 0 ? 12 : 10, 0, Math.PI * 2);
                 x.fill();
             });
             x.fillStyle = "rgba(255,255,255,0.7)"; x.font = "bold 13px Arial"; x.textAlign = "center";
