@@ -4,19 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SliderSnake - Free Multiplayer Snake Game</title>
-    <meta name="description" content="Play SliderSnake! A unique multiplayer snake game where small snakes are faster. Adopt a Bestie, raise babies, and dominate the arena. Free to play online.">
-    <meta name="keywords" content="snake game, multiplayer, slither.io clone, browser game, python game, underdog mechanic">
-    <meta name="robots" content="index, follow">
     <style>
-        body { margin: 0; overflow: hidden; background: #161616; color: white; font-family: 'Segoe UI', Arial, sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #111116; color: white; font-family: 'Segoe UI', Arial, sans-serif; user-select: none; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* UI w grze */
-        #ui { position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.4); padding: 10px 15px; border-radius: 6px; pointer-events: none; display: none; z-index: 10; }
-        #ui h2 { margin: 0 0 3px 0; font-size: 16px; color: #00ff7f; }
+        /* UI Wyników Gracza */
+        #ui { position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.5); padding: 12px 18px; border-radius: 8px; pointer-events: none; display: none; z-index: 10; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); }
+        #ui h2 { margin: 0 0 4px 0; font-size: 16px; color: #00ff7f; text-transform: uppercase; letter-spacing: 1px; }
         #ui p { margin: 2px 0; font-size: 13px; font-weight: bold; }
         .connected { color: #00ff7f; }
         .disconnected { color: #ff4444; }
+
+        /* --- NOWOŚĆ: DYNAMICZNA TABELA LEADERBOARD (SLITHER STYLE) --- */
+        #leaderboard { position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.45); padding: 15px; border-radius: 10px; pointer-events: none; display: none; z-index: 10; min-width: 180px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(4px); }
+        #leaderboard h3 { margin: 0 0 8px 0; font-size: 14px; text-align: center; color: #ffd700; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+        .lb-entry { font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; margin: 3px 0; }
+        .lb-me { color: #00ff7f !important; text-shadow: 0 0 5px rgba(0,255,127,0.5); }
+
+        /* Instrukcje Akcji w Rogu */
+        #controls-hint { position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 5px; font-size: 11px; z-index: 10; font-weight: bold; display: none; pointer-events: none; }
 
         /* --- REPLIKA LOBBY SLITHER.IO --- */
         #slither-lobby-wrapper {
@@ -24,69 +30,64 @@
             z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
             background: #141419;
         }
-
         .logo-title {
-            font-size: 110px; font-weight: bold; margin: 0 0 40px 0; font-style: normal; letter-spacing: -4px;
+            font-size: 110px; font-weight: bold; margin: 0 0 35px 0; letter-spacing: -4px;
             background: linear-gradient(to right, #4fe171, #4de073, #7252db, #7252db);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             filter: drop-shadow(0px 4px 10px rgba(0,0,0,0.9));
         }
-
         .slither-input {
             width: 260px; background: #000000; border: 2px solid #555; border-radius: 25px;
             padding: 12px 20px; color: #fff; font-size: 18px; font-weight: 500;
             text-align: center; outline: none; margin-bottom: 18px;
-            box-shadow: inset 0 3px 6px rgba(0,0,0,0.8); transition: border-color 0.2s;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.8);
         }
         .slither-input:focus { border-color: #fff; }
 
         .slither-play-btn {
             background: #2b6144; color: white; border: 2px solid #3d805b; border-radius: 20px;
             padding: 8px 30px; font-size: 20px; font-weight: bold; cursor: pointer; outline: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         .slither-play-btn:hover { background: #347552; transform: scale(1.03); }
 
-        .bestie-subtext { color: #00ff7f; font-size: 14px; font-weight: bold; margin: 15px 0 0 0; text-shadow: 0 0 5px rgba(0,255,127,0.3); }
+        .bestie-subtext { color: #00ff7f; font-size: 14px; font-weight: bold; margin: 15px 0 0 0; }
         #errorMsg { color: #ff4444; font-size: 12px; margin-top: 5px; font-weight: bold; height: 15px; }
 
-        /* LEWY DOLNY RÓG - CHANGE SKIN */
-        #skin-corner-btn {
-            position: absolute; bottom: 20px; left: 30px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s;
-        }
-        #skin-corner-btn:hover { transform: scale(1.05); }
-        #skin-corner-btn span { color: #52ec87; font-size: 14px; font-weight: bold; margin-top: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-
-        /* Popup skórek */
-        #skinMenu {
-            position: absolute; bottom: 100px; left: 30px; background: rgba(0,0,0,0.85); 
-            border: 2px solid #444; padding: 10px; border-radius: 15px; display: none; gap: 5px; box-shadow: 0 0 15px black;
-        }
-        .slither-skin-btn {
-            padding: 6px 12px; background: #222; color: white; border: 1px solid #555; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold;
-        }
+        #skin-corner-btn { position: absolute; bottom: 20px; left: 30px; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+        #skin-corner-btn span { color: #52ec87; font-size: 14px; font-weight: bold; margin-top: 5px; }
+        #skinMenu { position: absolute; bottom: 100px; left: 30px; background: rgba(0,0,0,0.85); border: 2px solid #444; padding: 10px; border-radius: 15px; display: none; gap: 5px; box-shadow: 0 0 15px black; }
+        .slither-skin-btn { padding: 6px 12px; background: #222; color: white; border: 1px solid #555; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="ui">
-    <h2>SliderSnake Web</h2>
+    <h2>SliderSnake Arena</h2>
     <p>Score: <span id="score">0</span></p>
+    <p>Level: <span id="lvl">1</span></p>
     <p>Status: <span id="status" class="disconnected">Connecting...</span></p>
 </div>
 
-<!-- PANEL LOBBY -->
+<!-- PANEL TABELI LIDERÓW -->
+<div id="leaderboard">
+    <h3>Leaderboard</h3>
+    <div id="lb-entries"></div>
+</div>
+
+<div id="controls-hint">
+    Hold CLICK: Sprint<br>
+    Press W: Lay Egg (potomek)<br>
+    Press Q: Poison Tail (jad)
+</div>
+
 <div id="slither-lobby-wrapper">
     <h1 class="logo-title">SliderSnake</h1>
-
     <input type="text" id="usernameInput" placeholder="Nickname" maxlength="15" class="slither-input">
-    
     <button onclick="startGame()" class="slither-play-btn">Play</button>
-    
     <p class="bestie-subtext">Click PLAY to start with your Bestie!</p>
     <p id="errorMsg"></p>
 
-    <!-- WYBÓR SKÓREK -->
     <div id="skinMenu">
         <button onclick="selectSkin('classic')" class="slither-skin-btn">Classic</button>
         <button onclick="selectSkin('neon')" class="slither-skin-btn">Neon</button>
@@ -95,7 +96,6 @@
         <button onclick="selectSkin('void')" class="slither-skin-btn">Void</button>
     </div>
 
-    <!-- PRZYCISK W ROGU -->
     <div id="skin-corner-btn" onclick="toggleSkinMenu()">
         <canvas id="previewCanvas" width="70" height="50" style="position:static; background:transparent; display:block;"></canvas>
         <span>Change Skin</span>
@@ -107,29 +107,22 @@
 <script>
     const c = document.getElementById("gameCanvas"), x = c.getContext("2d");
     c.width = innerWidth; c.height = innerHeight;
-    let snakes = {}, foods = [], camX = 0, camY = 0, myId = null;
-    let selectedSkin = "classic";
-    let playerName = "";
-    let inGame = false;
+    
+    let snakes = {}, foods = [], eggs = [], camX = 2500, camY = 2500, myId = null, selectedSkin = "classic", playerName = "", inGame = false;
+    let isSprinting = false;
 
-    // --- PODGLĄD W ROGU ---
-    const previewCanvas = document.getElementById("previewCanvas");
-    const pCtx = previewCanvas.getContext("2d");
+    const previewCanvas = document.getElementById("previewCanvas"), pCtx = previewCanvas.getContext("2d");
     let previewHue = 0;
 
     function drawPreview() {
         pCtx.clearRect(0, 0, 70, 50);
-        let cx = 35, cy = 25, radius = 9;
-        let r = 0, g = 255, b = 0;
+        let cx = 35, cy = 25, radius = 9, r = 0, g = 255, b = 0;
         
         if (selectedSkin === "gold") { r = 255; g = 215; b = 0; }
         if (selectedSkin === "void") { r = 0; g = 0; b = 0; }
         if (selectedSkin === "neon") { r = 0; g = 255; b = 127; }
-        
         if (selectedSkin === "rainbow") {
-            let hue = previewHue; 
-            let hueStep = hue / 60; 
-            let xVal = Math.floor((1 - Math.abs((hueStep % 2) - 1)) * 255);
+            let hueStep = previewHue / 60, xVal = Math.floor((1 - Math.abs((hueStep % 2) - 1)) * 255);
             if (hueStep < 1) { r = 255; g = xVal; b = 0; }
             else if (hueStep < 2) { r = xVal; g = 255; b = 0; }
             else if (hueStep < 3) { r = 0; g = 255; b = xVal; }
@@ -140,12 +133,6 @@
 
         pCtx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
         pCtx.beginPath(); pCtx.arc(cx, cy, radius, 0, Math.PI * 2); pCtx.fill();
-        if (selectedSkin === "void") { pCtx.strokeStyle = "white"; pCtx.lineWidth = 1; pCtx.stroke(); }
-
-        pCtx.fillStyle = "white"; pCtx.beginPath(); pCtx.arc(cx - 3, cy - 3, 2.5, 0, Math.PI*2); pCtx.fill();
-        pCtx.beginPath(); pCtx.arc(cx + 3, cy - 3, 2.5, 0, Math.PI*2); pCtx.fill();
-        pCtx.fillStyle = "black"; pCtx.beginPath(); pCtx.arc(cx - 3, cy - 3, 1, 0, Math.PI*2); pCtx.fill();
-        pCtx.beginPath(); pCtx.arc(cx + 3, cy - 3, 1, 0, Math.PI*2); pCtx.fill();
         
         previewHue = (previewHue + 3) % 360;
         requestAnimationFrame(drawPreview);
@@ -153,62 +140,60 @@
     drawPreview();
 
     function toggleSkinMenu() {
-        const menu = document.getElementById("skinMenu");
-        menu.style.display = menu.style.display === "flex" ? "none" : "flex";
+        const m = document.getElementById("skinMenu"); m.style.display = m.style.display === "flex" ? "none" : "flex";
     }
 
-    function selectSkin(skin) {
-        selectedSkin = skin;
-        document.querySelectorAll(".slither-skin-btn").forEach(btn => {
-            if (btn.getAttribute("onclick").includes(skin)) btn.style.borderColor = "#00ff7f";
-            else btn.style.borderColor = "#555";
+    function selectSkin(s) {
+        selectedSkin = s;
+        document.querySelectorAll(".slither-skin-btn").forEach(b => {
+            b.style.borderColor = b.getAttribute("onclick").includes(s) ? "#00ff7f" : "#555";
         });
     }
 
-    // --- WEBSOCKETS (FASTAPI) ---
-    let ws = null;
-    let targetX = 0, targetY = 0;
+    let ws = null, lastSendTime = 0;
 
     function startGame() {
-        const nameInput = document.getElementById("usernameInput");
-        const errorMsg = document.getElementById("errorMsg");
-        let name = nameInput.value.trim();
+        const nInput = document.getElementById("usernameInput"), err = document.getElementById("errorMsg");
+        let name = nInput.value.trim();
         if (!name) name = "Snake_" + Math.floor(Math.random() * 900 + 100);
-        playerName = name;
-
-        errorMsg.innerText = "Connecting...";
+        playerName = name; err.innerText = "Connecting...";
 
         const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-        const wsUrl = protocol + window.location.host + "/ws";
-
-        ws = new WebSocket(wsUrl);
+        ws = new WebSocket(protocol + window.location.host + "/ws");
 
         ws.onopen = () => {
             document.getElementById("status").innerText = "Connected";
             document.getElementById("status").className = "connected";
             document.getElementById("ui").style.display = "block";
+            document.getElementById("leaderboard").style.display = "block";
+            document.getElementById("controls-hint").style.display = "block";
             document.getElementById("slither-lobby-wrapper").style.display = "none";
             inGame = true;
-
-            ws.send(JSON.stringify({
-                type: "join", name: playerName, skin: selectedSkin
-            }));
+            
+            window.onmousemove = handleMove;
+            window.onmousedown = () => { isSprinting = true; handleMove({clientX: lastMouseX, clientY: lastMouseY}); };
+            window.onmouseup = () => { isSprinting = false; handleMove({clientX: lastMouseX, clientY: lastMouseY}); };
+            window.onkeydown = handleAction;
+            
+            ws.send(JSON.stringify({ type: "join", name: playerName, skin: selectedSkin }));
+            requestAnimationFrame(drawGame);
         };
 
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
+        ws.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
             if (msg.type === "joined") {
                 myId = msg.player_id;
-                initGameControls();
-                requestAnimationFrame(drawGame);
-            } 
-            else if (msg.type === "update") {
-                snakes = {};
-                msg.snakes.forEach(s => { snakes[s.id] = s; });
+            } else if (msg.type === "update") {
+                snakes = {}; msg.snakes.forEach(s => { snakes[s.id] = s; }); 
                 foods = msg.foods;
+                eggs = msg.eggs;
+                
+                // Render Leaderboard danych
+                updateLeaderboard(msg.leaderboard);
 
                 if (myId && snakes[myId]) {
                     document.getElementById("score").innerText = snakes[myId].points;
+                    document.getElementById("lvl").innerText = snakes[myId].level;
                     camX = snakes[myId].x; camY = snakes[myId].y;
                 }
             }
@@ -219,74 +204,120 @@
             document.getElementById("status").className = "disconnected";
             document.getElementById("slither-lobby-wrapper").style.display = "flex";
             document.getElementById("ui").style.display = "none";
-            inGame = false;
-            errorMsg.innerText = "Connection lost!";
+            document.getElementById("leaderboard").style.display = "none";
+            document.getElementById("controls-hint").style.display = "none";
+            inGame = false; err.innerText = "Connection lost!";
         };
     }
 
-    function initGameControls() {
-        window.onmousemove = (e) => {
-            targetX = camX + (e.clientX - innerWidth / 2);
-            targetY = camY + (e.clientY - innerHeight / 2);
-            if (ws && ws.readyState === WebSocket.OPEN && myId) {
-                ws.send(JSON.stringify({
-                    type: "move", player_id: myId, targetX: targetX, targetY: targetY
-                }));
-            }
-        };
+    let lastMouseX = 0, lastMouseY = 0;
+    function handleMove(e) {
+        if (!inGame || !myId) return;
+        if (e.clientX !== undefined) { lastMouseX = e.clientX; lastMouseY = e.clientY; }
+        
+        const now = Date.now();
+        if (now - lastSendTime < 50) return; 
+        lastSendTime = now;
+
+        const targetX = camX + (lastMouseX - innerWidth / 2); 
+        const targetY = camY + (lastMouseY - innerHeight / 2);
+        
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "move", player_id: myId, targetX: targetX, targetY: targetY, sprint: isSprinting }));
+        }
     }
 
-    // --- RENDERING ARENY ---
+    function handleAction(e) {
+        if (!inGame || !myId || !ws || ws.readyState !== WebSocket.OPEN) return;
+        if (e.key.toLowerCase() === 'q') {
+            ws.send(JSON.stringify({ type: "action", player_id: myId, action: "poison" }));
+        } else if (e.key.toLowerCase() === 'w') {
+            ws.send(JSON.stringify({ type: "action", player_id: myId, action: "egg" }));
+        }
+    }
+
+    function updateLeaderboard(data) {
+        const container = document.getElementById("lb-entries");
+        container.innerHTML = "";
+        if (!data) return;
+        data.forEach((entry, idx) => {
+            const div = document.createElement("div");
+            div.className = "lb-entry" + (entry.isPlayer ? " lb-me" : "");
+            div.innerHTML = "<span>" + (idx+1) + ". " + entry.name + "</span><span>" + entry.score + "</span>";
+            container.appendChild(div);
+        });
+    }
+
     function drawGame() {
         if (!inGame || !myId) return;
-        x.fillStyle = "#161616";
-        x.fillRect(0, 0, c.width, c.height);
+        x.fillStyle = "#121216"; x.fillRect(0, 0, c.width, c.height);
+        x.save(); x.translate(c.width / 2 - camX, c.height / 2 - camY);
 
-        x.save();
-        x.translate(c.width / 2 - camX, c.height / 2 - camY);
-
-        // Siatka
-        x.strokeStyle = "#242424";
-        x.lineWidth = 1;
+        // Siatka struktury świata
+        x.strokeStyle = "#1b1b22"; x.lineWidth = 1;
         for (let i = 0; i <= 5000; i += 100) {
             x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 5000); x.stroke();
             x.beginPath(); x.moveTo(0, i); x.lineTo(5000, i); x.stroke();
         }
+        x.strokeStyle = "#ff3333"; x.lineWidth = 5; x.strokeRect(0, 0, 5000, 5000);
 
-        // Granice
-        x.strokeStyle = "#ff4444"; x.lineWidth = 4; x.strokeRect(0, 0, 5000, 5000);
+        // Render jajek potomstwa na arenie
+        if (eggs) {
+            eggs.forEach(egg => {
+                x.fillStyle = "#ffffff"; x.shadowBlur = 10; x.shadowColor = "#00ff7f";
+                x.beginPath(); x.arc(egg.x, egg.y, 8, 0, Math.PI * 2); x.fill();
+            });
+        }
 
-        // Jedzenie
+        // Render roślinności / pożywienia / trującego jadu
         if (foods) {
             foods.forEach(f => {
-                x.fillStyle = "#ffdd44"; x.shadowBlur = 6; x.shadowColor = "#ffdd44";
-                x.beginPath(); x.arc(f.x, f.y, 5, 0, Math.PI * 2); x.fill();
+                if (f.is_poison) {
+                    x.fillStyle = "#9400d3"; x.shadowBlur = 12; x.shadowColor = "#9400d3"; // Fioletowa trucizna
+                } else {
+                    x.fillStyle = f.value > 2 ? "#00ffff" : "#ffdd44"; x.shadowBlur = 6; x.shadowColor = x.fillStyle;
+                }
+                x.beginPath(); x.arc(f.x, f.y, f.is_poison ? 6 : 4 + f.value, 0, Math.PI * 2); x.fill();
             });
         }
         x.shadowBlur = 0;
 
-        // Rysowanie węży (ZABEZPIECZONE PRZED WYCINANIEM INDEKSÓW)
+        // Render pętli węży z destrukturyzacją krotek
         Object.values(snakes).forEach(s => {
-            x.fillStyle = s.color;
+            // Zarządzanie efektami skórek w locie
+            if (s.skin === "rainbow") {
+                x.fillStyle = "hsl(" + s.hue + ", 100%, 50%)";
+            } else if (s.skin === "gold") {
+                x.fillStyle = "#ffd700";
+            } else if (s.skin === "void") {
+                x.fillStyle = "#111"; x.strokeStyle = "#fff"; x.lineWidth = 1.5;
+            } else {
+                x.fillStyle = s.color;
+            }
+
             s.segments.slice().reverse().forEach((seg, idx) => {
                 x.beginPath();
                 let realIdx = s.segments.length - 1 - idx;
                 
-                // .at(0) to współrzędna X, .at(1) to współrzędna Y segmentu z Pythona
-                let segmentX = seg.at(0);
-                let segmentY = seg.at(1);
+                const [segmentX, segmentY] = seg;
+                let radius_seg = realIdx === 0 ? 13 : 10;
                 
-                x.arc(segmentX, segmentY, realIdx === 0 ? 12 : 10, 0, Math.PI * 2);
+                // Modyfikacja grubości na podstawie poziomu
+                radius_seg += Math.min(10, s.level * 0.4);
+                
+                x.arc(segmentX, segmentY, radius_seg, 0, Math.PI * 2);
                 x.fill();
+                if (s.skin === "void") x.stroke();
             });
-            x.fillStyle = "rgba(255,255,255,0.7)"; x.font = "bold 13px Arial"; x.textAlign = "center";
-            x.fillText(s.name, s.x, s.y - 20);
+            
+            // Podpis Nicku oraz Poziomu nad głową węża
+            x.fillStyle = "rgba(255,255,255,0.8)"; x.font = "bold 13px Arial"; x.textAlign = "center";
+            x.fillText(s.name + " [Lvl " + s.level + "]", s.x, s.y - 22);
         });
 
-        x.restore();
+        x.restore(); 
         requestAnimationFrame(drawGame);
     }
-
     window.onresize = () => { c.width = innerWidth; c.height = innerHeight; };
 </script>
 </body>
