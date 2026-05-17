@@ -18,7 +18,7 @@
         .connected { color: #00ff7f; }
         .disconnected { color: #ff4444; }
 
-        /* --- REPLIKA LOBBY SLITHER.IO DLA SLIDERSNAKE --- */
+        /* --- REPLIKA LOBBY SLITHER.IO --- */
         #slither-lobby-wrapper {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -57,7 +57,7 @@
         #skin-corner-btn:hover { transform: scale(1.05); }
         #skin-corner-btn span { color: #52ec87; font-size: 14px; font-weight: bold; margin-top: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
 
-        /* Popup wyboru skórek */
+        /* Popup skórek */
         #skinMenu {
             position: absolute; bottom: 100px; left: 30px; background: rgba(0,0,0,0.85); 
             border: 2px solid #444; padding: 10px; border-radius: 15px; display: none; gap: 5px; box-shadow: 0 0 15px black;
@@ -75,7 +75,7 @@
     <p>Status: <span id="status" class="disconnected">Connecting...</span></p>
 </div>
 
-<!-- MENU GŁÓWNE -->
+<!-- PANEL LOBBY -->
 <div id="slither-lobby-wrapper">
     <h1 class="logo-title">SliderSnake</h1>
 
@@ -86,7 +86,7 @@
     <p class="bestie-subtext">Click PLAY to start with your Bestie!</p>
     <p id="errorMsg"></p>
 
-    <!-- MENU WYBORU SKÓREK -->
+    <!-- WYBÓR SKÓREK -->
     <div id="skinMenu">
         <button onclick="selectSkin('classic')" class="slither-skin-btn">Classic</button>
         <button onclick="selectSkin('neon')" class="slither-skin-btn">Neon</button>
@@ -95,7 +95,7 @@
         <button onclick="selectSkin('void')" class="slither-skin-btn">Void</button>
     </div>
 
-    <!-- LEWY DOLNY RÓG -->
+    <!-- PRZYCISK W ROGU -->
     <div id="skin-corner-btn" onclick="toggleSkinMenu()">
         <canvas id="previewCanvas" width="70" height="50" style="position:static; background:transparent; display:block;"></canvas>
         <span>Change Skin</span>
@@ -112,7 +112,7 @@
     let playerName = "";
     let inGame = false;
 
-    // --- MINI PODGLĄD W LEWYM DOLNYM ROGU ---
+    // --- PODGLĄD W ROGU ---
     const previewCanvas = document.getElementById("previewCanvas");
     const pCtx = previewCanvas.getContext("2d");
     let previewHue = 0;
@@ -120,8 +120,7 @@
     function drawPreview() {
         pCtx.clearRect(0, 0, 70, 50);
         let cx = 35, cy = 25, radius = 9;
-        
-        let r = 0, g = 255, b = 0; // Domyślne wartości dla classic
+        let r = 0, g = 255, b = 0;
         
         if (selectedSkin === "gold") { r = 255; g = 215; b = 0; }
         if (selectedSkin === "void") { r = 0; g = 0; b = 0; }
@@ -141,14 +140,8 @@
 
         pCtx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
         pCtx.beginPath(); pCtx.arc(cx, cy, radius, 0, Math.PI * 2); pCtx.fill();
-        
-        if (selectedSkin === "void") { 
-            pCtx.strokeStyle = "white"; 
-            pCtx.lineWidth = 1; 
-            pCtx.stroke(); 
-        }
+        if (selectedSkin === "void") { pCtx.strokeStyle = "white"; pCtx.lineWidth = 1; pCtx.stroke(); }
 
-        // Oczy podglądu
         pCtx.fillStyle = "white"; pCtx.beginPath(); pCtx.arc(cx - 3, cy - 3, 2.5, 0, Math.PI*2); pCtx.fill();
         pCtx.beginPath(); pCtx.arc(cx + 3, cy - 3, 2.5, 0, Math.PI*2); pCtx.fill();
         pCtx.fillStyle = "black"; pCtx.beginPath(); pCtx.arc(cx - 3, cy - 3, 1, 0, Math.PI*2); pCtx.fill();
@@ -172,7 +165,7 @@
         });
     }
 
-    // --- AUTOMATYCZNE POŁĄCZENIE WEBSOCKET Z FASTAPI ---
+    // --- WEBSOCKETS (FASTAPI) ---
     let ws = null;
     let targetX = 0, targetY = 0;
 
@@ -233,7 +226,6 @@
 
     function initGameControls() {
         window.onmousemove = (e) => {
-            // POPRAWIONE: Obie pozycje myszy obliczane są teraz prawidłowo względem wymiarów okna
             targetX = camX + (e.clientX - innerWidth / 2);
             targetY = camY + (e.clientY - innerHeight / 2);
             if (ws && ws.readyState === WebSocket.OPEN && myId) {
@@ -244,7 +236,7 @@
         };
     }
 
-    // --- ARENA DO GRY ---
+    // --- RENDERING ARENY ---
     function drawGame() {
         if (!inGame || !myId) return;
         x.fillStyle = "#161616";
@@ -253,7 +245,7 @@
         x.save();
         x.translate(c.width / 2 - camX, c.height / 2 - camY);
 
-        // Linie siatki
+        // Siatka
         x.strokeStyle = "#242424";
         x.lineWidth = 1;
         for (let i = 0; i <= 5000; i += 100) {
@@ -261,23 +253,30 @@
             x.beginPath(); x.moveTo(0, i); x.lineTo(5000, i); x.stroke();
         }
 
-        // Granica mapy
+        // Granice
         x.strokeStyle = "#ff4444"; x.lineWidth = 4; x.strokeRect(0, 0, 5000, 5000);
 
         // Jedzenie
-        foods.forEach(f => {
-            x.fillStyle = "#ffdd44"; x.shadowBlur = 6; x.shadowColor = "#ffdd44";
-            x.beginPath(); x.arc(f.x, f.y, 5, 0, Math.PI * 2); x.fill();
-        });
+        if (foods) {
+            foods.forEach(f => {
+                x.fillStyle = "#ffdd44"; x.shadowBlur = 6; x.shadowColor = "#ffdd44";
+                x.beginPath(); x.arc(f.x, f.y, 5, 0, Math.PI * 2); x.fill();
+            });
+        }
         x.shadowBlur = 0;
 
-        // Węże (POPRAWIONE: rysowanie z użyciem współrzędnych X i Y z tablicy segmentu)
+        // Rysowanie węży (ZABEZPIECZONE PRZED WYCINANIEM INDEKSÓW)
         Object.values(snakes).forEach(s => {
             x.fillStyle = s.color;
             s.segments.slice().reverse().forEach((seg, idx) => {
                 x.beginPath();
                 let realIdx = s.segments.length - 1 - idx;
-                x.arc(seg[0], seg[1], realIdx === 0 ? 12 : 10, 0, Math.PI * 2);
+                
+                // .at(0) to współrzędna X, .at(1) to współrzędna Y segmentu z Pythona
+                let segmentX = seg.at(0);
+                let segmentY = seg.at(1);
+                
+                x.arc(segmentX, segmentY, realIdx === 0 ? 12 : 10, 0, Math.PI * 2);
                 x.fill();
             });
             x.fillStyle = "rgba(255,255,255,0.7)"; x.font = "bold 13px Arial"; x.textAlign = "center";
