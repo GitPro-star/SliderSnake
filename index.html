@@ -251,6 +251,17 @@
     function drawGame() {
         if (!inGame || !myId) return;
         x.fillStyle = "#121216"; x.fillRect(0, 0, c.width, c.height);
+                
+        // --- CAMERA SNAP FIX ---
+        if (snakes[myId]) {
+            const p = snakes[myId];
+            if (Math.abs(camX - p.x) > 500 || Math.abs(camY - p.y) > 500) {
+                camX = p.x;
+                camY = p.y;
+                console.log("📍 Camera snapped to player at:", p.x, p.y);
+            }
+        }
+        // ------------------------
         x.save(); x.translate(c.width / 2 - camX, c.height / 2 - camY);
 
         // Siatka struktury świata
