@@ -114,4 +114,91 @@ async def websocket_endpoint(websocket: WebSocket):
             print(f"➖ Gracz {snakes[player_id]['name']} rozłączył się.")
             # Zmiana ciała w jedzenie po śmierci/wyjściu
             for segment in snakes[player_id]["segments"][::2]: 
-                foods.append({"x": segment[0], "y": segment[1], "value": 5
+                foods.append({"x": segment[0], "y": segment[1], "value": 5, "is_poison": False})
+            del snakes[player_id]
+
+# --- PĘTLA GRY (Game Loop) ---
+async def game_loop():
+    while True:
+        # 1. Obliczanie fizyki dla każdego węża
+        for sid, snake in snakes.items():
+            dx = snake["targetX"] - snake["x"]
+            dy = snake["targetY"] - snake["y"]
+            dist = math.hypot(dx, dy)
+            
+            speed = 8 if snake["sprint"] and snake["points"] > 50 else 4.5
+            
+            # Jeśli sprintuje, tracimy punkty i zostawiamy małe jedzenie za sobą
+            if snake["sprint"] and dist > 0 and snake["points"] > 50:
+                snake["points"] -= 0.5
+                if random.random() < 0.1:
+                    foods.append({"x": snake["segments"][-1][0], "y": snake["segments"][-1][1], "value": 1, "is_poison": False})
+            
+            if dist > speed:
+                snake["x"] += (dx / dist) * speed
+                snake["y"] += (dy / dist) * speed
+            else:
+                snake["x"] = snake["targetX"]
+                snake["y"] = snake["targetY"]
+                
+            # Ograniczenia mapy
+            snake["x"] = max(20, min(GAME_WIDTH - 20, snake["x"]))
+            snake["y"] = max(20, min(GAME_HEIGHT - 20, snake["y"]))
+                
+            # Aktualizacja historii segmentów (Ogon podąża za głową)
+            snake["segments"].insert(0, [snake["x"], snake["y"]])
+            target_length = 5 + (snake["points"] // 40)
+            
+            while len(snake["segments"]) > target_length:
+                snake["segments"].pop()
+                
+            # 2. Zbieranie jedzenia (Kolizje)
+            for f in foods[:]:
+                if math.hypot(snake["x"] - f["x"], snake["y"] - f["y"]) < 25:
+                    if f["is_poison"]:
+                        snake["points"] = max(10, snake["points"] - 50) # Bolesna kara
+                    else:
+                        snake["points"] += f["value"] * 5
+                    foods.remove(f)
+                    
+                    # Natychmiastowy respawn zjedzonego jedzenia gdzie indziej
+                    foods.append(spawn_food(is_poison=random.random() < 0.1))
+            
+            # Przeliczanie levelu na podstawie punktów
+            snake["level"] = max(1, snake["points"] // 100)
+
+        # 3. Aktualizacja Tabeli Liderów
+        leaderboard = [{"name": s["name"], "score": int(s["points"])} for s in snakes.values()]
+        leaderboard.sort(key=lambda x: x["score"], reverse=True)
+        top_10 = leaderboard[:10]
+
+        # 4. Konstrukcja pakietu danych i wysyłka do klientów (Broadcast)
+        update_msg = {
+            "type": "update",
+            "snakes": list(snakes.values()),
+            "foods": foods,
+            "eggs": eggs,
+            "leaderboard": top_10
+        }
+        
+        # Szybka konwersja do JSON przed pętlą ogranicza obciążenie procesora
+        json_msg = json.dumps(update_msg)
+        
+        dead_clients = set()
+        for client in clients:
+            try:
+                await client.send_text(json_msg)
+            except Exception:
+                dead_clients.add(client)
+                
+        for dead in dead_clients:
+            clients.remove(dead)
+                
+        # Serwer cyka z prędkością ok. 25 klatek na sekundę
+        await asyncio.sleep(0.04) 
+
+@app.on_event("startup")
+async def startup_event():
+    # Uruchamiamy silnik gry w tle zaraz po starcie serwera
+    asyncio.create_task(game_loop())
+    print("🚀 SliderSnake Game Engine Started!")
